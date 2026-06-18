@@ -49,7 +49,7 @@ else: intent = "💤低"
 
 ```python
 tons = re.findall(r'(\d+)\s*(?:ton|t|mt)', all_text)
-crane_kw = ['overhead','bridge','gantry','portal','jib','eot','tower','hoist','girder','cantilever']
+product_kw = ['crane','hoist','winch','lifting','girder','hook']  # 示例，实际从 config.json industry 读取
 ```
 
 ## 称呼提取（用于话术）

@@ -35,9 +35,9 @@
 ## 服务配置
 
 ```ini
-# /home/david/.config/systemd/user/wacli-sync.service
+# ~/.config/systemd/user/wacli-sync.service
 [Service]
-Environment=PATH=/home/david/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/usr/bin/python3 .../scripts/wacli-safe-sync.py --account test
 Restart=on-failure
 RestartSec=30

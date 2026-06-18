@@ -61,7 +61,7 @@ cronjob create:
 ## 本系统实际应用
 
 每日报告cron (`d6f4cd84d41e`)：
-- 旧：加载crane-sales-assistant skill → 31KB注入 + 15工具 → 53KB开销 → 失败
+- 旧：加载sales-assistant skill → 31KB注入 + 15工具 → 53KB开销 → 失败
 - 新：skills=[] + toolsets=[terminal,file] + prepare_report_data.py预处理 → ~5KB开销 → 预期稳定
 
 ## 分析命令

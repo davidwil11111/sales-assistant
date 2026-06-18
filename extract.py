@@ -59,7 +59,7 @@ def extract_products(name, cust_text, my_msgs, cfg):
     """从客户名和对话中提取产品标签，关键词来源于 config.json industry.product_keywords"""
     ind = cfg.get("industry", {})
     kw_map = ind.get("product_keywords", {})
-    context_kws = ind.get("context_keywords", ["crane"])
+    context_kws = ind.get("context_keywords", [])
     label_hints = ind.get("context_label_hints", [])
 
     products = []

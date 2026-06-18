@@ -1,4 +1,4 @@
-# 小虾销售系统 · 初始化引导流程
+# Sarah 销售系统 · 初始化引导流程
 
 ## 前置条件
 - config.json: `_status: "setup"`, 所有用户字段为空
@@ -21,7 +21,7 @@
 - 写入 `config.json → owner_timezone`
 
 **第3步：WhatsApp号码**
-- 格式不含+号，如 `8618530726580`
+- 格式不含+号，如 `8613800138000`
 - 等用户给出
 - 写入 `config.json → owner_phone`
 
@@ -48,7 +48,7 @@
 
 **第7步：启用定时任务（按顺序，连续执行）**
 1. 启用 wacli同步cron (每2h:00)
-2. 创建 extract刷新cron (每2h:01, no_agent=true, script=crane_extract.sh)
+2. 创建 extract刷新cron (每2h:01, no_agent=true, script=extract.sh)
 3. 启用 每日报告cron (09:00)
 - 全部启用后一次性报告cron状态
 

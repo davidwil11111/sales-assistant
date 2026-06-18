@@ -109,8 +109,8 @@ Sarah 的完整消息栈：
 
 | 平台 | 账号 | 连接方式 | 用途 |
 |------|------|----------|------|
-| WhatsApp | +86 18530726580 | WaCLI (test) | 客户沟通 |
-| WhatsApp | +86 19836278909 | WaCLI (business) | 业务号 |
+| WhatsApp | +86 138****8000 | WaCLI (test) | 客户沟通 |
+| WhatsApp | +86 139****9009 | WaCLI (business) | 业务号 |
 | 微信 | 个人号 | Hermes Gateway iLink | 与 AI 助手交互 |
 
 两个系统独立运行，互不冲突。

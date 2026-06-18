@@ -132,7 +132,7 @@ with open(outpath, 'w', encoding='utf-8') as f:
 1. **A级客户优先** — 立即用新号添加 WhatsApp
 2. **W级客户次之** — 本周内添加
 3. 发送换号通知（不提被封）：
-   > *Hey [Name], this is David from Antop Crane. I've switched to my new business number (+86 XXX). We were discussing [产品] — wanted to make sure you have my new contact. Looking forward to picking up!*
+   > *Hey [Name], this is [Your Name] from [Your Company]. I've switched to my new business number (+86 XXX). We were discussing [产品] — wanted to make sure you have my new contact. Looking forward to picking up!*
 
 ## 注意事项
 

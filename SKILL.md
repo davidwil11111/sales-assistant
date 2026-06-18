@@ -131,7 +131,7 @@ python3 onboarding.py scan
 
 你的名字：David
 时区：UTC+8
-WhatsApp：8618530726580
+WhatsApp：8613800138000
 行业：工程机械外贸
 从业年限：8年
 产品关键词：gantry crane, bridge crane, electric hoist, ...

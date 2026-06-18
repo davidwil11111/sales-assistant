@@ -1,4 +1,4 @@
-# 小虾销售系统 — 架构决策记录
+# Sarah 销售系统 — 架构决策记录
 
 ## ADR-1: 为什么18模块→3文件
 
@@ -72,11 +72,10 @@
 ## ADR-7: 系统文件归集
 
 **日期**: 2026-06-09
-**决策**: 所有系统文件统一在`~/.hermes/skills/openclaw-imports/crane-sales-assistant/`，不存在`~/crane_sales/`或`~/.openclaw/workspace/`的副本。
+**决策**: 所有系统文件统一在`~/.hermes/skills/openclaw-imports/sales-assistant/`，不存在`~/old_sales/`或`~/.openclaw/workspace/`的副本。
 
-**原因**: 
 - 双份文件导致不一致风险
-- 敏感客户数据(edgar_recovery.db等)散落在`~/crane_sales/`
-- `~/crane_sales/node_modules/`等和销售系统零关系的内容
+- 敏感客户数据散落在`~/old_sales/`
+- `~/old_sales/node_modules/`等和销售系统零关系的内容
 
-**清理**: 删除`~/crane_sales/`、`~/crane_sales_backup/`、`~/.openclaw/workspace/skills/crane-sales-assistant/`。所有敏感文件归集到`data/backups/`。
+**清理**: 删除`~/old_sales/`、`~/old_sales_backup/`、`~/.openclaw/workspace/skills/crane-sales-assistant/`。所有敏感文件归集到`data/backups/`。

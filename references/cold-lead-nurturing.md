@@ -10,52 +10,47 @@
 | 🥶 躺平层 | 聊过一次但断了（1个月+） | **刷存在**：新动态/新案例/新消息唤醒 |
 | ❄️ 冬眠层 | 超3个月无互动 | **重燃**：重大更新/节假日/行业资讯 |
 
-## 门机激活方案（你的真实冷客户）
-
-这个女人在51天前联系了客户"门机"
-这个客户是做门式起重机的？
-
-让我按不同客户类型给出**分层激活话术**：
+## 分层激活话术
 
 ---
 
 ### 🧊 沉默层（7天未回）— 换钩子
 
 **话术1 — 换个价值点（推视频/案例）**
-> Hi [Name], just following up on my last message. I recorded a short video showing how our [产品] works in a similar factory to yours. Thought it might be useful for your reference. No pressure, just sharing! 🏗️
+> Hi [Name], just following up on my last message. I recorded a short video showing how our products work in a similar setup to yours. Thought it might be useful for your reference. No pressure, just sharing! 🏗️
 >
 > [附加短视频/案例链接]
 
 **话术2 — 换个角度（从询价变帮对方）**
-> Hi [Name], I came across this article about [行业话题/客户所在国家起重机市场] and thought of you. By the way, if you're still looking for a crane solution, I'm happy to help with a free technical consultation — even if you end up buying from someone else! 😊
+> Hi [Name], I came across this article about [行业话题] and thought of you. By the way, if you're still looking for a solution, I'm happy to help with a free technical consultation — even if you end up buying from someone else! 😊
 
 **话术3 — 自然触发（问个简单问题）**
-> Hi [Name], quick question — what's the main application for the crane at your site? Steel fabrication, warehouse, or something else? Just want to make sure I recommend the right model. 🙏
+> Hi [Name], quick question — what's the main application scenario on your side? Just want to make sure I recommend the right model for you. 🙏
 
 ---
 
 ### 🥶 躺平层（1个月未回）— 刷存在
 
 **话术1 — 新动态触发**
-> Hello again [Name]! We just finished a new project for a [同行业客户] in [同地区]. They had similar requirements to yours — here's a quick look at their setup. Thought it might give you some ideas! 🏭
+> Hello again [Name]! We just finished a new project for a client in [同地区]. They had similar requirements to yours — here's a quick look at their setup. Thought it might give you some ideas! 🏭
 >
 > [附案例图片/视频]
 
 **话术2 — 行业资讯切入**
-> Hey [Name], hope you're doing well! I saw that [客户国家] has a new infrastructure project launching. Are you involved in that by any chance? We've been supplying cranes for similar projects and might be able to help if needed.
+> Hey [Name], hope you're doing well! I saw that [客户国家] has a new infrastructure project launching. Are you involved in that by any chance? We've been supplying equipment for similar projects and might be able to help if needed.
 
 **话术3 — 轻松幽默**
-> Hi [Name], I know I've been quiet — didn't want to spam you! 😄 Just wanted to say we're still here if you ever need crane solutions. We've also added a few new models recently, including a [新特性] option. Happy to share!
+> Hi [Name], I know I've been quiet — didn't want to spam you! 😄 Just wanted to say we're still here if you ever need our products. We've also added a few new models recently, including a [新特性] option. Happy to share!
 
 ---
 
 ### ❄️ 冬眠层（3个月+）— 重燃
 
 **话术1 — 节假日/新年问候**
-> Happy [节日] [Name]! Wishing you and your team a prosperous year ahead! 🎉 If your projects this year involve any crane requirements, I'd love to help out. Let me know if you'd like to see our latest catalog.
+> Happy [节日] [Name]! Wishing you and your team a prosperous year ahead! 🎉 If your projects this year involve any requirements, I'd love to help out. Let me know if you'd like to see our latest catalog.
 
 **话术2 — 公司里程碑/升级**
-> Big news! We just upgraded our factory with [新设备/新产线] — now we can deliver cranes 20% faster with even better quality. Just wanted to share in case it changes anything for your future projects! 🚀
+> Big news! We just upgraded our factory with [新设备/新产线] — now we can deliver products 20% faster with even better quality. Just wanted to share in case it changes anything for your future projects! 🚀
 
 **话术3 — 限时/稀缺性**
 > Hi [Name], we're running a special promotion for first-time customers this month: free spare parts kit + extended warranty for orders placed in [月份]. Thought I'd let you know in case you have any upcoming needs!

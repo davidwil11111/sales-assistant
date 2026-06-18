@@ -20,6 +20,6 @@
 
 ## 其他cron注意事项
 
-- 所有加载`crane-sales-assistant` skill的cron都面临同样的31KB注入问题
+- 所有加载销售助手的 skill 的 cron 都面临同样的31KB注入问题
 - 低频cron（月度/30天验证）风险较低但建议同样改用预处理模式
 - 周备份cron也加载了skill，如出现error优先考虑移除skill依赖

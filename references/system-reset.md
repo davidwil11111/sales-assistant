@@ -6,7 +6,7 @@
 
 ### 1. 归档旧数据
 ```bash
-cd ~/.hermes/skills/openclaw-imports/crane-sales-assistant
+cd ~/.hermes/skills/openclaw-imports/sales-assistant
 mkdir -p data/backups/archive_$(date +%Y%m%d)
 cp data/clients.json data/backups/archive_$(date +%Y%m%d)/
 cp data/summary.json data/backups/archive_$(date +%Y%m%d)/
