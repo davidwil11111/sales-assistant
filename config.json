@@ -1,0 +1,359 @@
+{
+  "_comment": "Sarah销售系统 — 全局配置。上线时由引导流程逐步填写。",
+  "_status": "setup",
+  "db_path": "~/.local/state/wacli/accounts/test/wacli.db",
+  "clients_json": "data/clients.json",
+  "owner_phone": "",
+  "owner_timezone": "",
+  "owner_name": "",
+  "industry": {
+    "_comment": "行业/产品配置 — 切换行业只需修改本节。product_keywords 为产品关键词→标签映射，用于从客户名和对话中自动识别产品。capacity_pattern 用于提取规格数字（如吨位/功率/尺寸）。technical_signals 用于机会温度计算中的技术讨论信号。",
+    "name": "工程机械外贸",
+    "persona_years": 10,
+    "product_keywords": {
+      "gantry": "gantry crane",
+      "bridge": "bridge crane",
+      "overhead": "overhead crane",
+      "jib": "jib crane",
+      "eot": "EOT crane",
+      "tower": "tower crane",
+      "portal": "portal crane",
+      "hoist": "electric hoist",
+      "sling": "sling",
+      "悬臂吊": "jib crane",
+      "桥机": "bridge crane",
+      "门机": "gantry crane",
+      "龙门": "gantry crane",
+      "葫芦": "electric hoist",
+      "钢结构": "steel structure"
+    },
+    "capacity_pattern": "(\\d+)\\s*[tT吨]",
+    "capacity_label": "吨",
+    "context_keywords": ["crane", "gantry", "overhead", "bridge", "jib", "eot", "tower", "portal", "hoist", "sling", "hook"],
+    "context_label_hints": ["gantry", "jib", "bridge", "overhead", "hoist"],
+    "temperature_demand_signals": ["spec", "specification", "config", "drawing", "technical", "quote", "quotation", "price", "fob", "cif", "capacity", "ton", "span", "height", "width", "dimension", "warranty", "certif", "standard"]
+  },
+  "scoring": {
+    "_comment": "extract.py 粗筛阈值（排队叫号，最终意向由Agent判断）",
+    "high_window_days": 7,
+    "high_keywords": [
+      "order",
+      "po",
+      "purchase order",
+      "deposit",
+      "invoice",
+      "confirm",
+      "contract",
+      "proceed",
+      "pi",
+      "proforma",
+      "finalize",
+      "place order"
+    ],
+    "medium_window_days": 14,
+    "medium_keywords": [
+      "price",
+      "delivery",
+      "lead time",
+      "payment",
+      "quote",
+      "fob",
+      "cif",
+      "shipment",
+      "discount",
+      "warranty",
+      "spec"
+    ],
+    "min_cust_msgs_for_medium": 3
+  },
+  "pools": {
+    "_comment": "池子自动流动规则",
+    "hot_max_size": 7,
+    "hot_max_silent_days": 30,
+    "B_max_size": 20,
+    "B_max_silent_days": 90,
+    "dormant_max_silent_days": 365
+  },
+  "detection": {
+    "_comment": "extract.py 自动检测阈值",
+    "pursuit_threshold": 4,
+    "weak_phrases": [
+      "i don't know if",
+      "i don't want to bother",
+      "did i make it clear",
+      "did i make me clealy",
+      "i'm afraid you'll forget",
+      "still haven't received a reply",
+      "waiting since yesterday",
+      "problem with my internet",
+      "je ne voudrais pas vous perdre",
+      "虽然",
+      "输了",
+      "lose your trust",
+      "bother you",
+      "j'ai voulu voir si vous aviez répondu",
+      "i'm truly touched",
+      "soy una niña pequeña",
+      "me pondré triste",
+      "no te molestaré más",
+      "going on and on about this is just bringing me down"
+    ],
+    "emoji_danger": [
+      "💔"
+    ],
+    "stale_threshold_hours": 1
+  },
+  "evolution": {
+    "_comment": "进化机制 — 系统自发现新模式、自动裁决",
+    "enabled": false,
+    "min_samples": 5,
+    "auto_add_threshold": 0.0,
+    "candidate_threshold": 0.5,
+    "verification_days": 30,
+    "onboarding_samples": 50,
+    "onboarding_weeks": 2
+  },
+  "country_tz": {
+    "1": [
+      "北美",
+      -5
+    ],
+    "20": [
+      "埃及",
+      2
+    ],
+    "212": [
+      "摩洛哥",
+      1
+    ],
+    "213": [
+      "阿尔及利亚",
+      1
+    ],
+    "216": [
+      "突尼斯",
+      1
+    ],
+    "218": [
+      "利比亚",
+      2
+    ],
+    "221": [
+      "塞内加尔",
+      0
+    ],
+    "234": [
+      "尼日利亚",
+      1
+    ],
+    "254": [
+      "肯尼亚",
+      3
+    ],
+    "255": [
+      "坦桑尼亚",
+      3
+    ],
+    "256": [
+      "乌干达",
+      3
+    ],
+    "27": [
+      "南非",
+      2
+    ],
+    "33": [
+      "法国",
+      1
+    ],
+    "34": [
+      "西班牙",
+      1
+    ],
+    "39": [
+      "意大利",
+      1
+    ],
+    "44": [
+      "英国",
+      0
+    ],
+    "49": [
+      "德国",
+      1
+    ],
+    "51": [
+      "秘鲁",
+      -5
+    ],
+    "52": [
+      "墨西哥",
+      -6
+    ],
+    "54": [
+      "阿根廷",
+      -3
+    ],
+    "55": [
+      "巴西",
+      -3
+    ],
+    "56": [
+      "智利",
+      -3
+    ],
+    "57": [
+      "哥伦比亚",
+      -5
+    ],
+    "58": [
+      "委内瑞拉",
+      -4
+    ],
+    "595": [
+      "巴拉圭",
+      -3
+    ],
+    "60": [
+      "马来西亚",
+      8
+    ],
+    "62": [
+      "印尼",
+      7
+    ],
+    "63": [
+      "菲律宾",
+      8
+    ],
+    "66": [
+      "泰国",
+      7
+    ],
+    "7": [
+      "俄罗斯",
+      3
+    ],
+    "81": [
+      "日本",
+      9
+    ],
+    "84": [
+      "越南",
+      7
+    ],
+    "86": [
+      "中国",
+      8
+    ],
+    "90": [
+      "土耳其",
+      3
+    ],
+    "91": [
+      "印度",
+      5.5
+    ],
+    "92": [
+      "巴基斯坦",
+      5
+    ],
+    "966": [
+      "沙特",
+      3
+    ],
+    "967": [
+      "也门",
+      3
+    ],
+    "971": [
+      "阿联酋",
+      4
+    ],
+    "98": [
+      "伊朗",
+      3.5
+    ],
+    "998": [
+      "乌兹别克斯坦",
+      5
+    ],
+    "880": [
+      "孟加拉",
+      6
+    ],
+    "977": [
+      "尼泊尔",
+      5.75
+    ],
+    "964": [
+      "伊拉克",
+      3
+    ],
+    "963": [
+      "叙利亚",
+      3
+    ],
+    "962": [
+      "约旦",
+      3
+    ],
+    "961": [
+      "黎巴嫩",
+      2
+    ],
+    "968": [
+      "阿曼",
+      4
+    ],
+    "973": [
+      "巴林",
+      3
+    ],
+    "974": [
+      "卡塔尔",
+      3
+    ],
+    "965": [
+      "科威特",
+      3
+    ],
+    "233": [
+      "加纳",
+      0
+    ],
+    "244": [
+      "安哥拉",
+      1
+    ],
+    "251": [
+      "埃塞俄比亚",
+      3
+    ],
+    "228": [
+      "多哥",
+      0
+    ],
+    "235": [
+      "乍得",
+      1
+    ],
+    "264": [
+      "纳米比亚",
+      2
+    ],
+    "250": [
+      "卢旺达",
+      2
+    ],
+    "93": [
+      "阿富汗",
+      4.5
+    ],
+    "996": [
+      "吉尔吉斯斯坦",
+      6
+    ]
+  },
+  "last_extract_at": "2026-06-11T11:14:46.690376"
+}

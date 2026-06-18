@@ -1,0 +1,31 @@
+# 客户数据（包含真实对话，不上传公开仓库）
+data/clients.json
+data/summary.json
+data/style_profile.json
+data/reply_stats.json
+data/candidates.json
+data/patterns_active.json
+data/patterns_history.json
+data/behavior_stats.json
+
+# 数据库文件
+*.db
+
+# 备份
+data/backups/
+!data/backups/.gitkeep
+
+# 临时文件
+/tmp/
+*.pyc
+__pycache__/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
