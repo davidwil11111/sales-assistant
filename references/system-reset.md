@@ -37,6 +37,6 @@ echo '{"baseline_reply_rate":0,"patterns":{},"sample_count":0}' > data/style_pro
 - 所有cron enabled=false
 
 ## 注意事项
-- 旧business数据库（14K消息）不做任何操作，保留作为历史参考
+- 旧的业务数据库不做任何操作，保留作为历史参考
 - wacli test账号的认证状态不做任何操作
 - SKILL.md 不修改
