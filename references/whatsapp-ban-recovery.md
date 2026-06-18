@@ -116,7 +116,7 @@ for c in cursor.fetchall():
     })
 
 # 导出 JSON
-outpath = Path.home() / 'crane_sales' / 'recovered_customers.json'
+outpath = Path.home() / 'sales-assistant' / 'recovered_customers.json'
 with open(outpath, 'w', encoding='utf-8') as f:
     json.dump({
         'export_time': datetime.now().isoformat(),
@@ -139,5 +139,5 @@ with open(outpath, 'w', encoding='utf-8') as f:
 - 数据库中的 `last_message_ts` 是 Unix 时间戳（秒），需 `datetime.fromtimestamp()` 转换
 - `messages.ts` 字段是整数时间戳，不是字符串
 - 空 `text` 的消息通常是图片/音频，检查 `media_type` 和 `display_text`
-- 导出文件放在 `~/crane_sales/` 下便于后续分析脚本发现
+- 导出文件放在 `sales-assistant/data/` 下便于后续分析脚本发现
 - 旧数据库不要删除，保留作为永久客户档案备份

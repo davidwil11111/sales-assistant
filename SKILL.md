@@ -47,7 +47,7 @@ python3 onboarding.py scan
    埃及 X · 秘鲁 X · 沙特 X · 土耳其 X · 阿根廷 X
 
 🔤 客户名高频词（Top 10）：
-   crane X · gantry X · steel X · equipment X · ...
+   [产品A] X · [产品B] X · steel X · equipment X · ...
 
 💬 对话高频关键词（Top 10）：
    price X · invoice X · delivery X · spec X · ...
@@ -99,10 +99,9 @@ python3 onboarding.py scan
 
 ```
 自动检测到的产品关键词（词频从高到低）：
-  crane(15)  gantry(12)  steel(10)  hoist(8)  bridge(7)
-  equipment(6)  industrial(5)  overhead(5)  jib(4)
+  [产品A](15)  [产品B](12)  steel(10)  [产品C](8)
 
-规格数字样本：5t / 10ton / 20吨 / 3kw / ...
+规格数字样本：5t / 10ton / 20pcs / ...
 ```
 
 - 然后问："你的产品有哪些？请说出核心产品名和它的常用叫法，格式：`英文关键词=中文标签`。"
@@ -132,12 +131,12 @@ python3 onboarding.py scan
 你的名字：David
 时区：UTC+8
 WhatsApp：8613800138000
-行业：工程机械外贸
-从业年限：8年
-产品关键词：gantry crane, bridge crane, electric hoist, ...
-规格单位：吨
-规格正则：(\d+)\s*[tT吨]
-技术讨论信号：spec, ton, span, capacity, ...
+行业：[由 B4 步骤用户输入决定]
+从业年限：[由 B5 步骤用户输入决定]
+产品关键词：[由 B6 步骤用户输入决定]
+规格单位：[由 B7 步骤用户输入决定]
+规格正则：[由 B7 步骤用户输入决定]
+技术讨论信号：[由 B8 步骤用户输入决定]
 
 确认无误？输入"确认"或告诉我要改哪项。
 ```
@@ -315,7 +314,7 @@ Workflow (cron推送)       Agent (SKILL.md驱动)
   // === extract 层（每次覆盖） ===
   "priority": "high",
   "days_silent": 1,
-  "products": ["gantry", "5吨"],
+  "products": ["[产品]", "[规格]"],
   "is_new_message": true,
   "is_new_customer_message": true,
   "detection": {
@@ -473,7 +472,7 @@ severity：`high`（可能显著影响客户感知）, `medium`（轻微错配�
 | Edgar | — | 40 | — | invoice+account |
 | 阿根廷 钢结构 | — | 80 | — | 需求+报价+付款 |
 | 埃及JIB3.5T | — | 5 | — | 客户被动 |
-| 土耳其 桥机25T | — | 20 | — | 客户说2个月后 |
+| 土耳其 [产品]25T | — | 20 | — | 客户说2个月后 |
 
 ---
 
@@ -549,7 +548,7 @@ AI可能看错：客户可能实际在等内部审批而非在等Invoice。如�
 
 | 客户 | 原因 | 成交窗口 | 轻触节奏 | 下次轻触 |
 |------|------|----------|----------|----------|
-| 土耳其 桥机25T | 客户明确说2个月后从中国采购 | 约53天后 | 每2周1次（行业资讯/案例/技术问题） | 约7天后 |
+| 土耳其 [产品]25T | 客户明确说2个月后从中国采购 | 约53天后 | 每2周1次（行业资讯/案例/技术问题） | 约7天后 |
 | 秘鲁 钢结构 | 已发报价，等客户反馈 | 不确定 | 首次5天后确认收到，之后每10天1次 | 5天后 |
 
 **窗口期内轻触原则：**

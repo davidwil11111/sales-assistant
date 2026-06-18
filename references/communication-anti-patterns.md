@@ -13,9 +13,9 @@
 **识别**: 客户回1条，所有者连发≥3条。或 detection.pursuit_warning=true。
 
 **真实案例**:
-- 肯尼亚25T桥机: 19条连发,客户回4条。最后一句"I don't want to bother you like this all the time"
-- 摩洛哥40T门机: 18条连发,客户回6条。"J'ai voulu voir si vous aviez répondu à mon message"
-- 埃及jib: 6条阿语连发，含"我看到你在线"
+- 某客户25T: 19条连发,客户回4条。最后一句"I don't want to bother you like this all the time"
+- 某客户40T: 18条连发,客户回6条。"J'ai voulu voir si vous aviez répondu à mon message"
+- 某客户: 6条阿语连发，含"我看到你在线"
 
 **为什么错**: 客户感受到的不是重视，是压迫。当你说"我不想打扰你"时，你已经在告诉他你打扰他了。
 

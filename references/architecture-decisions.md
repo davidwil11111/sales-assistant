@@ -78,4 +78,4 @@
 - 敏感客户数据散落在`~/old_sales/`
 - `~/old_sales/node_modules/`等和销售系统零关系的内容
 
-**清理**: 删除`~/old_sales/`、`~/old_sales_backup/`、`~/.openclaw/workspace/skills/crane-sales-assistant/`。所有敏感文件归集到`data/backups/`。
+**清理**: 删除`~/old_sales/`、`~/old_sales_backup/`、`~/.openclaw/workspace/skills/sales-assistant-backup/`。所有敏感文件归集到`data/backups/`。

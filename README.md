@@ -179,9 +179,7 @@ ls ~/.local/state/wacli/accounts/test/wacli.db
 
 ## 切换行业
 
-只需修改 `config.json` 的 `industry` 节，无需改动任何代码。
-
-**起重机械 → LED 灯示例：**
+系统启动时 `config.json` 的 `industry` 节为空。引导流程会帮你填好，也可以手动编辑。以下是一个 LED 灯外贸的实际配置示例：
 
 ```json
 {

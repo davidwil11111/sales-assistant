@@ -70,7 +70,7 @@ def extract_products(name, cust_text, my_msgs, cfg):
         if kw in name_lower and label not in products:
             products.append(label)
 
-    # 2. 容量/规格提取（如吨位），使用可配置的正则
+    # 2. 容量/规格提取（如重量/功率/尺寸），使用可配置的正则
     cap_pattern = ind.get("capacity_pattern", r"(\d+)\s*[tT吨]")
     cap_label = ind.get("capacity_label", "吨")
     cap_match = re.findall(cap_pattern, name)
