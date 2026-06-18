@@ -16,10 +16,11 @@
 ```json
 // config.json 关键修改
 "_status": "active",
-"owner_phone": "8618530726580",
-"owner_name": "David",
+"owner_phone": "86***********",
+"owner_name": "你的名字",
 "db_path": "~/.local/state/wacli/accounts/test/wacli.db"
 ```
+
 
 ### ② 检查wacli认证
 

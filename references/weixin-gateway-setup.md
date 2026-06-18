@@ -55,8 +55,8 @@ else:
 
 输出示例：
 ```
-微信连接成功，account_id=be8b2fce2b21@im.bot
-OK: {'account_id': 'be8b2fce2b21@im.bot', 'token': '...', 'base_url': 'https://ilinkai.weixin.qq.com', 'user_id': 'o9cq80789BuZhMOjirApSjKcDI1A@im.wechat'}
+微信连接成功，account_id=xxx@im.bot
+OK: {'account_id': 'xxx@im.bot', 'token': '...', 'base_url': 'https://ilinkai.weixin.qq.com', 'user_id': 'xxx@im.wechat'}
 ```
 
 凭证自动保存到 `~/.hermes/weixin/accounts/<account_id>.json`。
