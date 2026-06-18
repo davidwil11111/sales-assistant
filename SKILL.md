@@ -889,18 +889,16 @@ python3 extract.py --detail <JID>     # 输出单个客户完整对话
 - `references/morning-meeting-format.md` — 微信原生报告格式（禁止画线字符、板块结构、风格铁律）
 - `references/architecture-decisions.md` — 架构决策记录（为什么18→3模块、池子数学、token优化）
 - `references/communication-anti-patterns.md` — 风格错配模式库+禁词清单+修复指令
-- `references/evolution-design.md` — 进化机制设计（✅ 已实施：风格指纹+自动裁决+月度进化报告）
-- `references/config-weakphrases-update.md` — config.json弱句清单（已更新：+5弱句+emoji_danger）
+- `references/evolution-design.md` — 进化机制设计（风格指纹+自动裁决+月度进化报告）
 - `references/unicode-normalization-pitfall.md` — Unicode引号归一化（WhatsApp U+2019智能引号→匹配失败→修复）
 - `references/sales-stages.md` — 销售阶段定义
 - `references/cold-lead-nurturing.md` — 冷客户激活策略
 - `references/wacli-auth-setup.md` — WaCLI认证配置
-- `references/wacli-systemd-sync.md` — 自动同步服务（含安全包装器退避熔断+健康检查+限流恢复）
-- `references/whatsapp-wacli-safety.md` — WhatsApp风控安全（三层防护：安全包装器+健康检查+系统熔断；2026-06-10故障实录/封号预防/恢复流程）
+- `references/whatsapp-wacli-safety.md` — WhatsApp风控安全（三层防护：安全包装器+健康检查+系统熔断）
 - `references/whatsapp-ban-recovery.md` — 封号数据恢复
 - `references/cron-architecture.md` — cron架构决策（预处理脚本vs skill注入）
-- `references/cron-debugging-max-retries.md` — cron故障排查：max_retries_exhausted→BrokenPipeError的完整根因链+修复方案
-- `references/production-startup.md` — 生产环境启动流程（7步引导：配置→认证→同步→extract→cron→报告→验证）
+- `references/cron-debugging-max-retries.md` — cron故障排查：max_retries_exhausted→BrokenPipeError
+- `references/production-startup.md` — 生产环境启动流程（配置→认证→同步→extract→cron→报告）
 - `references/wechat-formatting-pitfalls.md` — 微信排版陷阱
 - `references/onboarding-flow.md` — 初始化引导流程（一问一答，8步上线）
 - `references/system-reset.md` — 系统重置流程（归档→清空→暂停→验证）
