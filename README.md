@@ -1,205 +1,169 @@
-# Sarah — AI 外贸销售助手
+# Sarah — AI 外贸销售跟进参谋
 
-自动分析你的 WhatsApp 客户聊天记录，每天早上告诉你该跟进谁、说什么。行业、产品完全可配置，不绑定任何特定领域。
+自动分析你的 **WhatsApp** 客户聊天记录，每天告诉你该跟进谁、说什么、有什么风险。  
+行业与产品可配置，不绑定特定品类。
+
+> **定位：** WhatsApp 外贸每日跟进参谋（不是 AI 自动成交引擎）。  
+> 机械的事交给脚本，判断的事留给 AI，**发送权永远在你手机上**。
+
+仓库：https://github.com/davidwil11111/sales-assistant
 
 ---
 
 ## 它能做什么
 
-- **自动读 WhatsApp** — 通过 wacli 同步聊天记录（只读，不帮你发消息，安全）
-- **自动评分** — 客户优先级、成交温度、是否被你"轰炸"了、说了哪些减分的话
-- **每日早会报告** — 告诉你要联系谁、说什么话、什么时候发、有什么风险
-- **客户池管理** — 自动把客户分热池/B池/沉默池，规则可配
-- **自我进化** — 追踪每条话术的回复率，自动发现并提醒你的减分话术
-
-> 相当于雇了个不要工资的销售助理，每天跟你开 5 分钟早会。
+| 能力 | 说明 |
+|------|------|
+| **只读同步 WhatsApp** | 经 wacli 拉取聊天（`sync` only），不代发消息 |
+| **客户池 + 温度** | 热 / B / 沉默池；机会温度 0–100（信号可配置） |
+| **智能引导** | 首次「开始配置」：填资料 → 认证同步 → 首次 extract |
+| **每日早会报告** | TOP3、今日工作、风格错配、承诺追踪等（十大板块） |
+| **安全写回** | `--write-analysis` 合并写回，禁止 Agent 手改整份 clients.json |
+| **报告快照** | `last_report.json` 支撑真实「昨日复盘」 |
+| **风格统计** | `--detail` 输出 `customer_style_stats`（可证伪，非编造） |
+| **多语言术语表** | 英/西/阿/法语术兜底，见 `references/glossary-multilingual.md` |
 
 ---
 
 ## 如何工作
 
 ```
-你的 WhatsApp
-     │
-     ▼ (wacli 只读同步，每2小时)
-SQLite 数据库
-     │
-     ▼ (extract.py 提取+分析)
-结构化数据 (JSON)
-     │
-     ▼ (AI Agent 读取数据，按规则生成)
-每日早会报告 → 推送到微信 / 终端
+WhatsApp
+   │  wacli sync --once（只读）
+   ▼
+SQLite (wacli.db)
+   │  extract.py
+   ▼
+data/summary.json + clients.json
+   │  Agent 按 SKILL.md 分析
+   ▼
+--write-analysis / --save-report
+   ▼
+早会报告（人审后手机发送话术）
 ```
 
-**核心理念：机械的事交给脚本，判断的事留给 AI。你永远做最终决定。**
+**首次使用：** `config._status == "setup"` → Agent 加载 `references/onboarding-flow.md` → 引导完成 → `_status = active`。
 
 ---
 
-## 适用平台
+## 适用 / 不适用
 
-本系统通过 `SKILL.md` 定义 Agent 行为，支持任何可以加载 Skill/Instruction 文件的 AI Agent 平台：
-
-| 平台 | 说明 |
-|------|------|
-| **OpenClaw / Hermes** | ✅ 原生支持，SKILL.md 直接加载 |
-| **Claude Code** | ✅ 将 SKILL.md 内容作为 system prompt 注入 |
-| **Cursor** | ✅ 使用 `.cursor/rules/` 或 `@file` 引用 |
-| **Cline / Roo Code** | ✅ 作为 `.clinerules` 或自定义 instruction 加载 |
-| **GitHub Copilot** | ⚠️ 需要手动将关键规则复制到 `.github/copilot-instructions.md` |
-| **任意 ChatGPT 套壳** | ✅ 将 SKILL.md 设为自定义 System Prompt |
-
-**最低要求：Agent 需要能执行终端命令（运行 Python 脚本）、读取/写入文件。**
+**适合：** 单兵或小团队、主要用 WhatsApp 跟进、客户几十到一两百、需要每日跟进节奏。  
+**不适合：** 指望 AI 代发消息、代填价格交期、替代 CRM 成交流程；客户极少且全在脑子里。
 
 ---
 
 ## 前置条件
 
-| 依赖 | 版本 | 用途 |
-|------|------|------|
-| **Python** | 3.8+ | 运行所有脚本（仅用标准库，零 pip 依赖） |
-| **wacli** | 最新版 | WhatsApp 数据同步（📦 [GitHub](https://github.com/tulir/whatsmeow) 生态） |
-| **AI Agent 平台** | — | 加载 SKILL.md，运行分析 |
-
-### 安装 wacli
-
-wacli 是一个基于 Go 的 WhatsApp Web 非官方命令行客户端。安装方式：
+| 依赖 | 说明 |
+|------|------|
+| Python 3.8+ | 仅标准库，**零 pip 依赖** |
+| [wacli](https://github.com/mautrix/whatsapp) | WhatsApp Web 非官方 CLI，只用于 sync |
+| AI Agent | 能执行终端命令 + 读写文件（Hermes / Claude Code / Cursor 等） |
 
 ```bash
-# Go 用户
+# 安装 wacli（示例）
 go install go.mau.fi/mautrix-whatsapp/cmd/wacli@latest
-
-# 或使用预编译二进制（推荐）
-# 从 https://github.com/mautrix/whatsapp/releases 下载对应平台版本
+# 或从 mautrix/whatsapp releases 下载预编译包
 ```
 
-> ⚠️ wacli 是非官方客户端，使用存在风控风险。本项目只用 wacli 同步聊天记录（只读），不发送任何消息。
+> ⚠️ wacli 非官方客户端，有风控风险。本项目**只读同步**，不调用 send。
 
 ---
 
-## 安装
+## 安装与首次配置
 
-### 1. 克隆项目
+### 1. 克隆
 
 ```bash
 git clone https://github.com/davidwil11111/sales-assistant.git
 cd sales-assistant
 ```
 
-如果你使用的是 OpenClaw / Hermes：
+OpenClaw / Hermes：
 
 ```bash
 cd ~/.hermes/skills/openclaw-imports/
 git clone https://github.com/davidwil11111/sales-assistant.git
 ```
 
-### 2. 配置 wacli
+### 2. 配对 wacli（账号名默认 `test`，可在引导中改）
 
 ```bash
-# 添加账号（替换成你自己的号码）
 wacli accounts add test --phone +86********* --follow
-
-# 终端会显示配对码，在手机上：
-# WhatsApp → 已链接设备 → 关联设备 → 用手机号关联 → 输入配对码
-
-# 验证认证状态
+# 手机：WhatsApp → 已链接设备 → 用配对码关联
 wacli auth status --account test
-# 期望输出: Authenticated as 86*********@s.whatsapp.net
+wacli sync --once --account test --max-db-size 500MB
 ```
 
-### 3. 确认数据库路径
+确认库路径（按系统调整）：
 
 ```bash
-# wacli 数据库默认位置
 ls ~/.local/state/wacli/accounts/test/wacli.db
+# Windows 常见：%USERPROFILE%\.local\state\wacli\accounts\test\wacli.db
 ```
 
-如果数据库在其他位置，修改 `config.json` 中的 `db_path`。
+路径不对时改 `config.json` 的 `db_path`。
 
-### 4. 启动智能引导
+### 3. 在 Agent 里说
 
-在你的 Agent 中说：
+```text
+开始配置
+```
 
-> 开始配置
-
-系统会自动进入引导流程：扫描数据库 → 展示探测结果 → 与你逐一确认配置项 → 写入配置 → 激活。
-
-引导流程会帮你完成：
-- 自动探测你的 WhatsApp 号、客户国家分布、高频产品关键词
-- 确认你的名字、时区、行业
-- 配置产品关键词和规格识别规则
-- 运行首次数据提取
-
-**整个流程约 5 分钟。**
+引导会完成：探测数据库 → 确认名字/时区/号码/行业/产品词/温度信号 → 写入 config → 再 sync → `extract.py` → 启动报告。  
+细节见 **`references/onboarding-flow.md`**。
 
 ---
 
-## 日常使用
+## 日常指令
 
-配置完成后，在与 Agent 的对话中使用以下指令：
+| 你说 | 系统做什么 |
+|------|------------|
+| `今日报告` | extract → 分析 → 早会报告 → `--save-report` |
+| `分析一下[客户]` | detail + 7 步分析 → `--write-analysis` |
+| `[客户]最新情况` | 状态速览 |
+| `帮我写话术` | 先问价/交期/品牌/付款；非中文查术语表 |
+| `搜一下[国家]新闻` | 搜索后匹配客户写触达话术 |
 
-| 指令 | 作用 |
+### 核心 CLI
+
+```bash
+python extract.py                                 # 或 python3
+python extract.py --detail <JID>
+python extract.py --write-analysis '{"jid":"...","intent":"高",...}'
+python extract.py --save-report '{"top3":[...],"actions":[...]}'
+python scripts/test_stability.py                  # 单元/逻辑自检
+python scripts/e2e_smoke.py                       # 真实库 E2E（备份或 --db）
+python scripts/e2e_smoke.py --db path/to/wacli.db
+```
+
+**禁止**手改覆盖 `data/clients.json`；分析结论一律走 `--write-analysis`。
+
+---
+
+## 配置要点（`config.json`）
+
+| 区块 | 作用 |
 |------|------|
-| `今日报告` | 生成完整早会报告（7个板块） |
-| `Sarah，分析一下[客户名]` | 深度分析单个客户 |
-| `[客户名]最新情况` | 快速查看客户当前状态 |
-| `帮我写话术，[情况]` | 生成 WhatsApp 话术 |
-| `搜一下[国家]最新新闻` | 搜索行业新闻匹配客户 |
+| `owner_*` / `wacli_account` / `db_path` | 身份与数据源 |
+| `industry.product_keywords` | 产品识别 |
+| `industry.temperature_hot_signals` 等 | 温度信号（空=通用外贸默认） |
+| `pools.hot_entry` | **自动入热池门槛**（priority/新消息/温度/无轰炸等） |
+| `scoring` | priority 粗筛关键词 |
+| `evolution` | 弱模式自学习（默认 `enabled: false`） |
 
----
-
-## 配置文件
-
-`config.json` 包含所有可配置项：
-
-```json
-{
-  "owner_name": "你的名字",
-  "owner_phone": "8613800138000",
-  "owner_timezone": "UTC+8",
-  "db_path": "~/.local/state/wacli/accounts/test/wacli.db",
-  "industry": {
-    "name": "你的行业",
-    "product_keywords": { "英文": "中文标签" },
-    "capacity_pattern": "规格正则",
-    "capacity_label": "单位",
-    "temperature_demand_signals": ["技术讨论信号词"]
-  },
-  "pools": {
-    "hot_max_size": 7,
-    "hot_max_silent_days": 30,
-    "B_max_size": 20,
-    "B_max_silent_days": 90
-  }
-}
-```
-
-详细字段说明见 `config.json` 中的 `_comment`。
-
----
-
-## 切换行业
-
-系统启动时 `config.json` 的 `industry` 节为空。引导流程会帮你填好，也可以手动编辑。以下是一个 LED 灯外贸的实际配置示例：
+LED 行业示例（温度中温可配技术词）：
 
 ```json
 {
   "industry": {
     "name": "LED灯外贸",
-    "persona_years": 5,
-    "product_keywords": {
-      "panel": "面板灯",
-      "bulb": "灯泡",
-      "strip": "灯带",
-      "highbay": "工矿灯",
-      "flood": "投光灯",
-      "面板灯": "面板灯",
-      "球泡": "灯泡"
-    },
+    "product_keywords": { "panel": "面板灯", "bulb": "灯泡" },
     "capacity_pattern": "(\\d+)\\s*[wW瓦]",
     "capacity_label": "瓦",
-    "context_keywords": ["led", "light", "bulb", "lamp", "panel", "strip", "highbay"],
-    "context_label_hints": ["led", "light", "bulb", "panel"],
-    "temperature_demand_signals": ["watt", "lumen", "cri", "ip", "driver", "color", "spec", "quote", "price", "fob"]
+    "temperature_hot_signals": ["invoice", "deposit", "pi", "payment", "confirm order"],
+    "temperature_demand_signals": ["watt", "lumen", "cri", "ip", "driver", "spec", "quote"]
   }
 }
 ```
@@ -210,94 +174,79 @@ ls ~/.local/state/wacli/accounts/test/wacli.db
 
 ```
 sales-assistant/
-├── SKILL.md              ← Agent 行为定义（人格、分析规则、报告模板）
-├── config.json           ← 全局配置（行业、池子、阈值）
-├── extract.py            ← 核心提取脚本（SQLite → JSON）
-├── onboarding.py         ← 智能引导脚本（自动探测 + 配置写入）
+├── SKILL.md                 # Agent runtime（瘦身核心规则）
+├── config.json              # 全局配置（仓库内为 setup 模板）
+├── extract.py               # 提取 / detail / 安全写回 / 报告快照
+├── onboarding.py            # scan + write 引导
 ├── scripts/
-│   ├── prepare_report_data.py  ← cron 专用预处理
-│   ├── wacli-safe-sync.py      ← wacli 安全包装器（退避 + 熔断）
-│   └── wacli-health-check.py   ← 健康检查
-├── data/                 ← 运行数据（自动生成）
-└── references/           ← 架构决策文档
+│   ├── prepare_report_data.py
+│   ├── test_stability.py
+│   ├── e2e_smoke.py
+│   ├── wacli-safe-sync.py
+│   └── wacli-health-check.py
+├── references/
+│   ├── onboarding-flow.md          # 首次引导全文
+│   ├── report-template.md          # 早会完整模板
+│   ├── glossary-multilingual.md    # 多语言术语
+│   └── ...                         # 设计决策与安全文档
+└── data/                    # 运行时生成（默认 gitignore，勿提交客户数据）
 ```
 
 ---
 
-## 定时任务（可选，推荐）
+## 定时任务（可选）
 
-配置 cron 后可实现全自动：每 2 小时同步 WhatsApp → 每天 09:00 自动推送报告。
-
-### OpenClaw / Hermes cron 配置
+每日报告 cron **不要加载完整 SKILL**（上下文过大），用预处理脚本：
 
 ```bash
-# 1. wacli 同步（每2小时）
-hermes cron create --schedule "0 */2 * * *" \
-  --command "wacli sync --once --account test --max-db-size 500MB" \
-  --no-agent
-
-# 2. extract 刷新（每2小时，在同步后1分钟）
-hermes cron create --schedule "1 */2 * * *" \
-  --command "cd ~/.hermes/skills/openclaw-imports/sales-assistant && python3 extract.py" \
-  --no-agent
-
-# 3. 每日报告（09:00）
-hermes cron create --schedule "0 9 * * *" \
-  --command "cd ~/.hermes/skills/openclaw-imports/sales-assistant && python3 scripts/prepare_report_data.py" \
-  --skills "" --toolsets "terminal,file"
-```
-
-> ⚠️ 每日报告 cron 需要 `skills: ""` 和 `toolsets: "terminal,file"`，否则可能因上下文过大导致失败。
-
-### 通用 cron（Linux/macOS）
-
-```bash
-# crontab -e
+# 每 2 小时同步（账号名与 config.wacli_account 一致）
 0 */2 * * * wacli sync --once --account test --max-db-size 500MB
+
+# 同步后 1 分钟刷新
 1 */2 * * * cd /path/to/sales-assistant && python3 extract.py
+
+# 每天 09:00 预处理（Agent 只做格式化推送时 skills 留空）
 0 9 * * * cd /path/to/sales-assistant && python3 scripts/prepare_report_data.py
 ```
 
+Hermes 示例见 `references/production-startup.md`、`references/cron-debugging-max-retries.md`。
+
 ---
 
-## 安全
+## 安全与隐私
 
-### WhatsApp 风控
+- wacli **仅** `sync` / `auth status`；话术人发  
+- 对话原文不进 `clients.json`，按 JID detail 查询  
+- `data/clients.json`、备份库、报告快照等已在 `.gitignore`  
+- **请勿**把含真实客户聊天的 `data/` 或 `*.db` 推到公开仓库  
 
-- ✅ wacli **只做 `sync`**，不调用 `send` 或其他写操作
-- ✅ 默认使用 `--once` 模式（一次性同步完就退出，不保持长连接）
-- ✅ 安全包装器提供指数退避 + 熔断保护，防止频繁重连触发风控
-- ❌ 所有话术由你在手机上手动发送，系统永远不碰发送端
+---
 
-### 数据保护
+## 测试
 
-- 对话原文不存储在 JSON 中，AI 按需查询单客户，控制 token 消耗
-- 每次运行自动备份数据库，保留最近 7 份
-- 客户数据不出本地，不上传任何服务器
+```bash
+python scripts/test_stability.py   # 写回 / 温度配置 / 热池门槛 / SKILL 体积等
+python scripts/e2e_smoke.py        # 使用 data/backups 或 config 中的库（隔离临时目录）
+```
 
 ---
 
 ## 常见问题
 
-### Q: wacli 是什么？安全吗？
+**Q: 安全吗？**  
+只读同步 + 本地数据 + 不自动发消息，是刻意的最低风险姿势；wacli 本身仍非官方。
 
-wacli 是一个开源的 WhatsApp Web 命令行工具。它不是 Meta 官方产品，使用有一定风控风险。本项目只使用它的 `sync`（只读同步）功能，不发送任何消息，是最低风险的使用方式。
+**Q: 不用 Hermes 能用吗？**  
+能。把 `SKILL.md` 当 system / skill 加载，Agent 能跑终端即可。
 
-### Q: 我不用 OpenClaw/Hermes，能用吗？
+**Q: 需要 pip 吗？**  
+不需要。
 
-可以。核心逻辑全在 Python 脚本里，`SKILL.md` 是 Agent 行为规范。你可以手动将 SKILL.md 内容复制到任何支持 system prompt 的 AI 工具中使用，只是自动化程度会降低。
+**Q: 热池为什么经常是 0？**  
+自动入热有门槛（新消息、温度≥35、priority=high 等）。也可由 Agent 裁决 `pool_suggestion` 后 `--write-analysis` 升池。
 
-### Q: 需要装什么 Python 库？
-
-不需要。全部使用 Python 3 标准库（`sqlite3`, `json`, `re`, `pathlib`），零 pip 依赖。
-
-### Q: 支持其他聊天工具（微信、Telegram）吗？
-
-当前只支持 WhatsApp（通过 wacli）。微信/Telegram 需要对应的同步工具，核心分析逻辑是通用的。
-
-### Q: 我的客户消息很少，能用吗？
-
-可以。系统会标记数据稀疏情况，在报告中诚实标注置信度。前 50 个客户样本是观察期，系统静默收集数据，不批评不裁决。
+**Q: 客户消息很少？**  
+`customer_style_stats.confidence=low` 时会标低置信度，不编造「过去 100 条」风格。
 
 ---
 
@@ -309,8 +258,8 @@ MIT License
 
 ## 贡献
 
-欢迎提交 Issue 和 Pull Request。建议先开 Issue 讨论你想要的改动。
+欢迎 Issue / PR。大改动建议先开 Issue 讨论。
 
 ---
 
-**由 [wacli](https://github.com/mautrix/whatsapp) + Python 3 + AI Agent 驱动。**
+**由 wacli + Python 3 + AI Agent 驱动 · [GitHub](https://github.com/davidwil11111/sales-assistant)**

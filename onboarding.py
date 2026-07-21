@@ -208,6 +208,39 @@ def scan():
     except:
         pass
 
+    # ---- 8. 建议温度信号（从对话词频中筛成交/技术类，供引导确认）----
+    hot_candidates = {
+        "invoice", "pi", "proforma", "payment", "deposit", "delivery", "ship",
+        "packing", "swift", "iban", "transfer", "order", "confirm", "po",
+        "account", "lc", "tt", "bank",
+    }
+    mid_candidates = {
+        "quote", "quotation", "price", "fob", "cif", "spec", "drawing",
+        "warranty", "certificate", "standard", "sample", "catalog", "brochure",
+    }
+    try:
+        chat_kw = {x["word"]: x["count"] for x in result.get("detected_chat_keywords", [])}
+        result["suggested_temperature_hot"] = sorted(
+            [{"word": w, "count": chat_kw[w]} for w in hot_candidates if w in chat_kw],
+            key=lambda x: -x["count"],
+        )
+        result["suggested_temperature_mid"] = sorted(
+            [{"word": w, "count": chat_kw[w]} for w in mid_candidates if w in chat_kw],
+            key=lambda x: -x["count"],
+        )
+        used = hot_candidates | mid_candidates
+        result["suggested_temperature_demand"] = [
+            x for x in result.get("detected_chat_keywords", [])
+            if x.get("word") not in used
+        ][:15]
+    except Exception:
+        result["suggested_temperature_hot"] = []
+        result["suggested_temperature_mid"] = []
+        result["suggested_temperature_demand"] = []
+
+    result["wacli_account_current"] = cfg.get("wacli_account") or "test"
+    result["config_status"] = cfg.get("_status", "setup")
+
     conn.close()
     return result
 
@@ -223,6 +256,8 @@ def write_config(data):
         cfg["owner_phone"] = data["owner_phone"]
     if data.get("owner_timezone"):
         cfg["owner_timezone"] = data["owner_timezone"]
+    if data.get("wacli_account"):
+        cfg["wacli_account"] = data["wacli_account"]
 
     # 更新行业配置
     ind = data.get("industry", {})
@@ -242,6 +277,12 @@ def write_config(data):
         cfg["industry"]["context_label_hints"] = ind["context_label_hints"]
     if ind.get("temperature_demand_signals"):
         cfg["industry"]["temperature_demand_signals"] = ind["temperature_demand_signals"]
+    if ind.get("temperature_hot_signals"):
+        cfg["industry"]["temperature_hot_signals"] = ind["temperature_hot_signals"]
+    if ind.get("temperature_mid_signals"):
+        cfg["industry"]["temperature_mid_signals"] = ind["temperature_mid_signals"]
+    if ind.get("temperature_wait_signals"):
+        cfg["industry"]["temperature_wait_signals"] = ind["temperature_wait_signals"]
 
     # 激活
     cfg["_status"] = "active"

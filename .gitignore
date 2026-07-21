@@ -7,6 +7,9 @@ data/candidates.json
 data/patterns_active.json
 data/patterns_history.json
 data/behavior_stats.json
+data/report_input.json
+data/last_report.json
+data/report_history/
 
 # 数据库文件
 *.db

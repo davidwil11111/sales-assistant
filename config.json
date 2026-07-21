@@ -2,12 +2,13 @@
   "_comment": "Sarah销售系统 — 全局配置。上线时由引导流程逐步填写。",
   "_status": "setup",
   "db_path": "~/.local/state/wacli/accounts/test/wacli.db",
+  "wacli_account": "test",
   "clients_json": "data/clients.json",
   "owner_phone": "",
   "owner_timezone": "",
   "owner_name": "",
   "industry": {
-    "_comment": "行业/产品配置 — 由引导流程根据用户输入自动填充。切换行业只需修改本节。product_keywords 为产品关键词→标签映射，用于从客户名和对话中自动识别产品。capacity_pattern 用于提取规格数字（如吨/瓦/米）。context_keywords 和 temperature_demand_signals 用于判断客户是否在讨论技术细节。",
+    "_comment": "行业/产品配置。temperature_hot_signals=成交推进(+15)；temperature_mid_signals=评估中(+10)；temperature_demand_signals=并入中温；temperature_wait_signals=降温。留空则用 extract 内置通用外贸默认值。",
     "name": "",
     "persona_years": 0,
     "product_keywords": {},
@@ -15,7 +16,10 @@
     "capacity_label": "",
     "context_keywords": [],
     "context_label_hints": [],
-    "temperature_demand_signals": []
+    "temperature_hot_signals": [],
+    "temperature_mid_signals": [],
+    "temperature_demand_signals": [],
+    "temperature_wait_signals": []
   },
   "scoring": {
     "_comment": "extract.py 粗筛阈值（排队叫号，最终意向由Agent判断）",
@@ -51,12 +55,21 @@
     "min_cust_msgs_for_medium": 3
   },
   "pools": {
-    "_comment": "池子自动流动规则",
+    "_comment": "池子自动流动。hot_entry=自动入热池门槛（全部满足才 auto upgrade；否则仅 pool_suggestion 交给 Agent）",
     "hot_max_size": 7,
     "hot_max_silent_days": 30,
     "B_max_size": 20,
     "B_max_silent_days": 90,
-    "dormant_max_silent_days": 365
+    "dormant_max_silent_days": 365,
+    "hot_entry": {
+      "auto_upgrade_enabled": true,
+      "require_priority": "high",
+      "require_new_customer_message": true,
+      "min_cust_msgs": 2,
+      "max_days_silent": 14,
+      "min_temperature": 35,
+      "require_no_pursuit": true
+    }
   },
   "detection": {
     "_comment": "extract.py 自动检测阈值",

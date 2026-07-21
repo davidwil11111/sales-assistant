@@ -3,13 +3,17 @@
 extract.py — Sarah销售系统唯一数据脚本
 
 默认模式: SQLite → clients.json（元数据，不含对话原文，轻量文件）
-详情模式: --detail JID → 输出单个客户的完整对话到 stdout
+详情模式: --detail JID → 输出单个客户完整对话 + customer_style_stats
+写回模式: --write-analysis '<json>' → 安全合并写回 Agent 分析字段
+快照模式: --save-report '<json>' → 写入 data/last_report.json（昨日复盘底座）
 
 用法:
-  python3 extract.py                  # 生成 clients.json
-  python3 extract.py --detail <JID>   # 输出单个客户详情
+  python3 extract.py
+  python3 extract.py --detail <JID>
+  python3 extract.py --write-analysis '{"jid":"...","intent":"高",...}'
+  python3 extract.py --save-report '{"top3":[...],"actions":[...]}'
 """
-import sqlite3, json, re, sys, argparse
+import sqlite3, json, re, sys, argparse, os, tempfile
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 import shutil
@@ -23,10 +27,136 @@ REPLY_STATS = SCRIPT_DIR / "data" / "reply_stats.json"
 CANDIDATES = SCRIPT_DIR / "data" / "candidates.json"
 PATTERNS_ACTIVE = SCRIPT_DIR / "data" / "patterns_active.json"
 PATTERNS_HISTORY = SCRIPT_DIR / "data" / "patterns_history.json"
+LAST_REPORT = SCRIPT_DIR / "data" / "last_report.json"
+REPORT_HISTORY_DIR = SCRIPT_DIR / "data" / "report_history"
+
+# Agent 可覆盖的标量字段（写回时合并）
+AGENT_SCALAR_FIELDS = (
+    "intent", "stage", "diagnosis", "script", "send_time",
+    "risk", "coach_note", "analyzed_at", "pool",
+)
+# 历史层：只追加
+AGENT_APPEND_FIELDS = ("script_history", "coach_log", "pool_history", "promises")
+# extract 每次覆盖，write_analysis 禁止改动
+EXTRACT_PROTECTED = {
+    "jid", "name", "country", "utc_offset", "local_hour", "priority",
+    "days_silent", "cust_msg_count", "my_msg_count", "products",
+    "last_message_ts", "last_customer_message_ts", "is_new_message",
+    "is_new_customer_message", "detection", "script_tracking",
+    "pool_suggestion", "analyzed_stale", "temperature", "temperature_history",
+}
+
+_EMOJI_RE = re.compile(
+    "["
+    "\U0001F300-\U0001F9FF"
+    "\U00002600-\U000027BF"
+    "\U0001F600-\U0001F64F"
+    "\U0001F680-\U0001F6FF"
+    "]+",
+    flags=re.UNICODE,
+)
+
 
 def load_config():
-    with open(CONFIG) as f:
+    with open(CONFIG, encoding="utf-8") as f:
         return json.load(f)
+
+
+def atomic_write_json(path, data):
+    """原子写 JSON：先写临时文件再 replace，防止半写损坏。"""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+        os.replace(tmp, path)
+    except Exception:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+def backup_clients_json():
+    """写回前备份 clients.json，保留最近 20 份。"""
+    if not CLIENTS_JSON.exists():
+        return None
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    dest = BACKUP_DIR / f"clients_write_{ts}.json"
+    shutil.copy2(CLIENTS_JSON, dest)
+    backups = sorted(BACKUP_DIR.glob("clients_write_*.json"))
+    for old in backups[:-20]:
+        try:
+            old.unlink()
+        except OSError:
+            pass
+    return str(dest)
+
+
+def load_clients_list():
+    if not CLIENTS_JSON.exists():
+        return []
+    with open(CLIENTS_JSON, encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, list):
+        raise ValueError("clients.json 必须是数组")
+    return data
+
+
+def compute_customer_style_stats(msgs, owner_name="owner"):
+    """从消息列表统计单客户沟通风格（可证伪，供 Agent 风格匹配使用）。"""
+    cust_texts = []
+    owner_texts = []
+    for m in msgs:
+        text = (m.get("text") or m.get("display_text") or "").strip()
+        if not text:
+            continue
+        if m.get("from_me"):
+            owner_texts.append(text)
+        else:
+            cust_texts.append(text)
+
+    def _stats(texts):
+        if not texts:
+            return {
+                "msg_count": 0,
+                "avg_len": 0,
+                "emoji_count": 0,
+                "emoji_rate": 0.0,
+                "msgs_with_emoji": 0,
+                "question_rate": 0.0,
+                "sample_phrases": [],
+            }
+        lengths = [len(t) for t in texts]
+        emoji_hits = [_EMOJI_RE.findall(t) for t in texts]
+        emoji_count = sum(len(e) for e in emoji_hits)
+        with_emoji = sum(1 for e in emoji_hits if e)
+        questions = sum(1 for t in texts if "?" in t or "？" in t)
+        # 极短消息样本（风格指纹）
+        short = [t for t in texts if len(t) <= 40][:8]
+        return {
+            "msg_count": len(texts),
+            "avg_len": round(sum(lengths) / len(lengths), 1),
+            "emoji_count": emoji_count,
+            "emoji_rate": round(with_emoji / len(texts), 3),
+            "msgs_with_emoji": with_emoji,
+            "question_rate": round(questions / len(texts), 3),
+            "sample_phrases": short,
+        }
+
+    cust = _stats(cust_texts)
+    owner = _stats(owner_texts[-5:] if owner_texts else [])  # 最近所有者消息
+    confidence = "high" if cust["msg_count"] >= 20 else ("medium" if cust["msg_count"] >= 8 else "low")
+    return {
+        "customer": cust,
+        "owner_recent": owner,
+        "confidence": confidence,
+        "note": "customer 统计来自近30条内客户消息；样本不足时 confidence=low，禁止编造历史风格",
+    }
 
 def get_country(jid, tz_map):
     phone = jid.split("@")[0]
@@ -140,18 +270,76 @@ def track_script(msgs, last_agent_script):
     return {"script_sent": sent, "script_result": result}
 
 def pool_suggestion(priority, days, old_pool, has_new_cust_msg, cfg):
+    """池子建议（不直接改 pool）。升级建议已收紧：B→热需 high，或 medium 且沉默≤7天。"""
     pools = cfg["pools"]
     if not old_pool:
         old_pool = "B"
     if old_pool == "hot" and days > pools["hot_max_silent_days"]:
         return "downgrade_to_B"
-    if old_pool == "B" and has_new_cust_msg and priority in ("high", "medium"):
+    # 收紧：不再因 medium+任意新消息就建议升热
+    if old_pool == "B" and has_new_cust_msg and priority == "high":
+        return "upgrade_to_hot"
+    if old_pool == "B" and has_new_cust_msg and priority == "medium" and days <= 7:
         return "upgrade_to_hot"
     if old_pool in ("dormant", "archive") and has_new_cust_msg:
         return "upgrade_to_hot"
     if old_pool == "B" and days > pools["B_max_silent_days"]:
         return "downgrade_to_dormant"
+    if old_pool == "dormant" and days > pools.get("dormant_max_silent_days", 365):
+        return "archive"
     return None
+
+
+def can_auto_upgrade_to_hot(priority, days, has_new_cust_msg, cust_count,
+                            pursuit_warning, temperature, cfg):
+    """自动入热池门槛：全部满足才直接改 pool，否则只留 pool_suggestion。"""
+    rules = (cfg.get("pools") or {}).get("hot_entry") or {}
+    if not rules.get("auto_upgrade_enabled", True):
+        return False
+    need_pri = rules.get("require_priority", "high")
+    if priority != need_pri:
+        return False
+    if rules.get("require_new_customer_message", True) and not has_new_cust_msg:
+        return False
+    if cust_count < int(rules.get("min_cust_msgs", 2)):
+        return False
+    if days > int(rules.get("max_days_silent", 14)):
+        return False
+    if rules.get("require_no_pursuit", True) and pursuit_warning:
+        return False
+    if temperature < int(rules.get("min_temperature", 35)):
+        return False
+    return True
+
+
+# 通用外贸默认信号（行业未配置时使用；行业可在 config.industry 覆盖）
+DEFAULT_HOT_SIGNALS = [
+    "invoice", "pi", "proforma", "bank", "account", "payment",
+    "deposit", "delivery", "ship", "packing", "ce certif",
+    "visit factory", "come to china", "visit china",
+    "swift", "iban", "transfer", "remit", "tt", "l/c", "lc ",
+    "confirm order", "place order", "purchase order", "po ",
+]
+DEFAULT_MID_SIGNALS = [
+    "quote", "quotation", "price", "fob", "cif",
+    "warranty", "certif", "standard",
+]
+DEFAULT_WAIT_SIGNALS = [
+    "wait", "later", "next month", "next year", "not now", "next week", "next time",
+    "两个月", "2 month", "two month", "明年", "过段时间",
+]
+
+
+def resolve_temperature_signals(cfg=None):
+    """从 industry 读取温度信号；空列表/缺省则回退默认。"""
+    ind = (cfg or {}).get("industry") or {}
+    hot = ind.get("temperature_hot_signals") or DEFAULT_HOT_SIGNALS
+    mid = list(ind.get("temperature_mid_signals") or DEFAULT_MID_SIGNALS)
+    for sig in ind.get("temperature_demand_signals") or []:
+        if sig and sig not in mid:
+            mid.append(sig)
+    wait = ind.get("temperature_wait_signals") or DEFAULT_WAIT_SIGNALS
+    return list(hot), mid, list(wait)
 
 def compute_probability(stage, days_silent, has_new_cust_msg, pursuit_warning, priority, old_prob=None):
     """基于当前对话信号计算成交概率（不是科学精确值，是相对参考）"""
@@ -170,78 +358,45 @@ def compute_probability(stage, days_silent, has_new_cust_msg, pursuit_warning, p
     return {"value": prob, "trend": trend, "previous": old_prob}
 
 def compute_temperature(cust_msgs, days_silent, pursuit_warning, cfg=None):
-    """机会温度 0-100：从客户聊天里扫描具体成交信号，不是靠猜
-    
-    高温信号（客户在主动推动交易）：
-    - invoice/PI/银行账号/付款方式/发货/包装/CE证书/来厂验货
-    
-    中温信号（客户在评估）：
-    - 配置/技术参数/图纸/报价（关键词来自 config.json industry.temperature_demand_signals）
-    
-    低温信号（客户在了解）：
-    - 公司介绍/产品目录/初步询价
-    
-    降温信号：
-    - 沉默>7天 / 连发轰炸 / 客户说"等等"
+    """机会温度 0-100：信号词来自 config.industry（可配置），缺省用通用外贸默认。
+
+    高温 +15 / 中温 +10 / 问句 +5(封顶15) / 沉默与轰炸降温 / wait 信号 -15
     """
     temp = 10  # 基础温度：有对话
-    
-    # 扫描近30条客户消息
+
     customer_texts = [(m["text"] or "").lower() for m in cust_msgs]
     all_text = " ".join(customer_texts)
-    
-    # 高温信号：+15分/个
-    hot_signals = [
-        "invoice", "pi", "proforma", "bank", "account", "payment",
-        "deposit", "delivery", "ship", "packing", "ce certif",
-        "visit factory", "come to china", "visit china",
-        "swift", "iban", "transfer", "remit", "tt", "l/c", "lc ",
-        "confirm order", "place order", "purchase order", "po ",
-    ]
+
+    hot_signals, mid_signals, wait_signals = resolve_temperature_signals(cfg)
+
     for sig in hot_signals:
-        if sig in all_text:
+        if sig and str(sig).lower() in all_text:
             temp += 15
-    
-    # 中温信号：+10分/个 — 通用成交信号 + 行业技术信号（来自config）
-    mid_signals = [
-        "quote", "quotation", "price", "fob", "cif",
-        "warranty", "certif", "standard",
-    ]
-    # 追加行业配置的技术讨论信号
-    if cfg:
-        ind = cfg.get("industry", {})
-        for sig in ind.get("temperature_demand_signals", []):
-            if sig not in mid_signals:
-                mid_signals.append(sig)
+
     for sig in mid_signals:
-        if sig in all_text:
+        if sig and str(sig).lower() in all_text:
             temp += 10
-    
-    # 客户提问信号（问句=兴趣）：+5分/个
+
     question_markers = ["?", "how", "what", "when", "where", "can you", "do you", "is it", "could you", "would you"]
     q_count = sum(1 for t in customer_texts if any(m in t for m in question_markers))
     temp += min(q_count * 5, 15)
-    
-    # 降温
+
     if days_silent > 7:
         temp -= 10
     if days_silent > 14:
         temp -= 15
     if pursuit_warning:
         temp -= 10
-    
-    # 客户明确说等/延迟
-    wait_signals = ["wait", "later", "next month", "next year", "not now", "next week", "next time",
-                    "两个月", "2 month", "two month", "明年", "过段时间"]
+
     for sig in wait_signals:
-        if sig in all_text:
+        if sig and str(sig).lower() in all_text:
             temp -= 15
             break
-    
+
     return max(0, min(100, temp))
 
 def update_phrase_correlations(msgs, phrase_stats, cfg):
-    """追踪David的每条消息→客户48h内是否回复"""
+    """追踪所有者每条消息→客户48h内是否回复"""
     tracked = set(cfg["detection"]["weak_phrases"])
     msgs_sorted = sorted(msgs, key=lambda m: m["ts"])
     
@@ -412,11 +567,237 @@ def apply_auto_rules(pending, cfg):
         PATTERNS_ACTIVE.write_text(json.dumps({"active": existing_active + active_entries}, ensure_ascii=False, indent=2))
     return added
 
+def _parse_payload(raw):
+    """解析 CLI JSON：支持字符串或 @file 路径。"""
+    if raw is None:
+        raise ValueError("缺少 JSON payload")
+    raw = raw.strip()
+    if raw.startswith("@"):
+        with open(raw[1:], encoding="utf-8") as f:
+            return json.load(f)
+    return json.loads(raw)
+
+
+def _append_unique(existing, new_items, key_fields=None):
+    """追加列表项；coach_log 按 type+summary 去重，其余直接 append dict。"""
+    if not new_items:
+        return list(existing or [])
+    out = list(existing or [])
+    if not isinstance(new_items, list):
+        new_items = [new_items]
+    for item in new_items:
+        if not isinstance(item, dict):
+            continue
+        if key_fields:
+            sig = tuple(item.get(k) for k in key_fields)
+            if any(tuple(e.get(k) for k in key_fields) == sig for e in out if isinstance(e, dict)):
+                continue
+        out.append(item)
+    return out[-50:]  # 防止无限膨胀
+
+
+def write_analysis(payload):
+    """安全合并写回 Agent 分析字段。禁止覆盖 extract 层与整文件重写 history。"""
+    if isinstance(payload, str):
+        payload = _parse_payload(payload)
+    if not isinstance(payload, dict):
+        print(json.dumps({"ok": False, "error": "payload 必须是对象"}, ensure_ascii=False))
+        return 1
+    jid = payload.get("jid")
+    if not jid:
+        print(json.dumps({"ok": False, "error": "缺少 jid"}, ensure_ascii=False))
+        return 1
+
+    # 拒绝保护字段
+    forbidden = [k for k in payload if k in EXTRACT_PROTECTED and k != "jid"]
+    if forbidden:
+        print(json.dumps({
+            "ok": False,
+            "error": f"禁止写入 extract 层字段: {forbidden}",
+            "hint": "只传 intent/stage/diagnosis/script/pool/coach_log 等 Agent 字段",
+        }, ensure_ascii=False))
+        return 1
+
+    clients = load_clients_list()
+    idx = next((i for i, c in enumerate(clients) if c.get("jid") == jid), None)
+    if idx is None:
+        print(json.dumps({"ok": False, "error": f"clients.json 中无此 jid: {jid}"}, ensure_ascii=False))
+        return 1
+
+    client = dict(clients[idx])
+    before_pool = client.get("pool")
+    changed = []
+
+    for field in AGENT_SCALAR_FIELDS:
+        if field in payload and payload[field] is not None:
+            client[field] = payload[field]
+            changed.append(field)
+
+    # analyzed_at 默认现在
+    if "analyzed_at" not in payload:
+        client["analyzed_at"] = datetime.now().isoformat()
+        if "analyzed_at" not in changed:
+            changed.append("analyzed_at")
+    client["analyzed_stale"] = False
+
+    # script_history：若有新 script 且与上次不同则追加
+    if payload.get("script"):
+        hist = list(client.get("script_history") or [])
+        last = hist[-1] if hist else None
+        last_text = last.get("script") if isinstance(last, dict) else last
+        if payload["script"] != last_text:
+            hist.append({
+                "script": payload["script"],
+                "at": client.get("analyzed_at"),
+                "result": None,
+            })
+            client["script_history"] = hist[-30:]
+            changed.append("script_history")
+
+    if "coach_log" in payload and payload["coach_log"]:
+        client["coach_log"] = _append_unique(
+            client.get("coach_log"), payload["coach_log"], key_fields=("type", "summary")
+        )
+        changed.append("coach_log")
+
+    if "pool_history" in payload and payload["pool_history"]:
+        client["pool_history"] = _append_unique(client.get("pool_history"), payload["pool_history"])
+        changed.append("pool_history")
+    elif "pool" in payload and payload["pool"] and payload["pool"] != before_pool:
+        ph = list(client.get("pool_history") or [])
+        ph.append({
+            "from": before_pool,
+            "to": payload["pool"],
+            "reason": payload.get("pool_reason") or payload.get("diagnosis") or "agent",
+            "at": client.get("analyzed_at"),
+        })
+        client["pool_history"] = ph[-30:]
+        changed.append("pool_history")
+
+    # promises：追加新承诺；promise_updates 按 id 更新状态
+    if "promises" in payload and payload["promises"]:
+        existing = list(client.get("promises") or [])
+        for p in payload["promises"]:
+            if not isinstance(p, dict):
+                continue
+            entry = {
+                "id": p.get("id") or f"p_{datetime.now().strftime('%Y%m%d%H%M%S')}_{len(existing)}",
+                "text": p.get("text") or "",
+                "due": p.get("due"),
+                "status": p.get("status") or "open",
+                "created_at": p.get("created_at") or datetime.now().isoformat(),
+                "source": p.get("source") or "agent",
+            }
+            if not entry["text"]:
+                continue
+            # 同 text+open 不重复
+            if any(e.get("text") == entry["text"] and e.get("status") == "open" for e in existing):
+                continue
+            existing.append(entry)
+        client["promises"] = existing[-40:]
+        changed.append("promises")
+
+    if "promise_updates" in payload and payload["promise_updates"]:
+        existing = list(client.get("promises") or [])
+        by_id = {e.get("id"): e for e in existing if isinstance(e, dict)}
+        for u in payload["promise_updates"]:
+            if not isinstance(u, dict):
+                continue
+            pid = u.get("id")
+            if pid and pid in by_id:
+                if u.get("status"):
+                    by_id[pid]["status"] = u["status"]
+                if u.get("note"):
+                    by_id[pid]["note"] = u["note"]
+                by_id[pid]["updated_at"] = datetime.now().isoformat()
+        client["promises"] = list(by_id.values()) if by_id else existing
+        changed.append("promises")
+
+    if not changed:
+        print(json.dumps({"ok": False, "error": "无有效字段可写"}, ensure_ascii=False))
+        return 1
+
+    backup = backup_clients_json()
+    clients[idx] = client
+    atomic_write_json(CLIENTS_JSON, clients)
+    result = {
+        "ok": True,
+        "jid": jid,
+        "name": client.get("name"),
+        "changed": changed,
+        "backup": backup,
+        "pool": client.get("pool"),
+        "intent": client.get("intent"),
+        "promises_open": sum(1 for p in (client.get("promises") or []) if p.get("status") == "open"),
+    }
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0
+
+
+def save_report(payload):
+    """保存报告快照 → last_report.json + report_history/日期.json，供昨日复盘。"""
+    if isinstance(payload, str):
+        payload = _parse_payload(payload)
+    if not isinstance(payload, dict):
+        print(json.dumps({"ok": False, "error": "payload 必须是对象"}, ensure_ascii=False))
+        return 1
+
+    now = datetime.now()
+    snapshot = {
+        "generated_at": payload.get("generated_at") or now.isoformat(),
+        "date": payload.get("date") or now.strftime("%Y-%m-%d"),
+        "owner_name": payload.get("owner_name") or load_config().get("owner_name") or "owner",
+        "top3": payload.get("top3") or [],
+        "actions": payload.get("actions") or [],
+        "temperatures": payload.get("temperatures") or {},
+        "promises_open": payload.get("promises_open") or [],
+        "risks": payload.get("risks") or [],
+        "one_liner": payload.get("one_liner") or "",
+        "notes": payload.get("notes") or "",
+    }
+    # 若未传 promises_open，从 clients 汇总 open 承诺
+    if not snapshot["promises_open"] and CLIENTS_JSON.exists():
+        open_ps = []
+        for c in load_clients_list():
+            for p in c.get("promises") or []:
+                if isinstance(p, dict) and p.get("status") == "open":
+                    open_ps.append({
+                        "jid": c.get("jid"),
+                        "name": c.get("name"),
+                        "id": p.get("id"),
+                        "text": p.get("text"),
+                        "due": p.get("due"),
+                    })
+        snapshot["promises_open"] = open_ps
+
+    atomic_write_json(LAST_REPORT, snapshot)
+    REPORT_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+    hist_path = REPORT_HISTORY_DIR / f"{snapshot['date']}.json"
+    atomic_write_json(hist_path, snapshot)
+    # 只保留最近 30 天历史
+    histories = sorted(REPORT_HISTORY_DIR.glob("*.json"))
+    for old in histories[:-30]:
+        try:
+            old.unlink()
+        except OSError:
+            pass
+
+    print(json.dumps({
+        "ok": True,
+        "path": str(LAST_REPORT),
+        "history": str(hist_path),
+        "top3_count": len(snapshot["top3"]),
+        "actions_count": len(snapshot["actions"]),
+        "promises_open_count": len(snapshot["promises_open"]),
+    }, ensure_ascii=False, indent=2))
+    return 0
+
+
 def detail(jid):
-    """输出单个客户的完整对话到 stdout"""
+    """输出单个客户完整对话 + customer_style_stats + 已有分析/承诺。"""
     cfg = load_config()
     db_path = Path(cfg["db_path"]).expanduser()
-    owner_name = cfg["owner_name"]
+    owner_name = cfg.get("owner_name") or "owner"
 
     if not db_path.exists():
         print(json.dumps({"error": f"数据库不存在: {db_path}"}, ensure_ascii=False))
@@ -437,10 +818,9 @@ def detail(jid):
         ORDER BY ts DESC LIMIT 30
     """, (jid,)).fetchall()
 
-    # 加载旧 clients.json 中的 Agent 分析字段
     old = {}
     if CLIENTS_JSON.exists():
-        with open(CLIENTS_JSON) as f:
+        with open(CLIENTS_JSON, encoding="utf-8") as f:
             for c in json.load(f):
                 if c["jid"] == jid:
                     old = c
@@ -452,8 +832,24 @@ def detail(jid):
         if text:
             recent.append({"role": owner_name if m["from_me"] else "客户", "text": text})
 
-    cfg_country = cfg["country_tz"]
-    country, offset = get_country(jid, cfg_country)
+    msg_dicts = [
+        {"text": m["text"], "display_text": m["display_text"], "from_me": bool(m["from_me"]), "ts": m["ts"]}
+        for m in msgs
+    ]
+    style_stats = compute_customer_style_stats(msg_dicts, owner_name)
+
+    country, offset = get_country(jid, cfg["country_tz"])
+
+    # 昨日报告中与该客户相关的行动
+    yesterday_actions = []
+    if LAST_REPORT.exists():
+        try:
+            lr = json.loads(LAST_REPORT.read_text(encoding="utf-8"))
+            for a in lr.get("actions") or []:
+                if a.get("jid") == jid or a.get("name") == (chat["name"] or ""):
+                    yesterday_actions.append(a)
+        except (json.JSONDecodeError, OSError):
+            pass
 
     output = {
         "jid": jid,
@@ -462,7 +858,7 @@ def detail(jid):
         "utc_offset": offset,
         "local_hour": get_local_hour(offset),
         "recent_conversation": recent,
-        # Agent 已有分析
+        "customer_style_stats": style_stats,
         "intent": old.get("intent"),
         "stage": old.get("stage"),
         "diagnosis": old.get("diagnosis"),
@@ -470,7 +866,12 @@ def detail(jid):
         "script_history": old.get("script_history", []),
         "coach_log": old.get("coach_log", []),
         "pool": old.get("pool", "B"),
+        "pool_suggestion": old.get("pool_suggestion"),
+        "temperature": old.get("temperature"),
+        "promises": old.get("promises", []),
         "analyzed_at": old.get("analyzed_at"),
+        "analyzed_stale": old.get("analyzed_stale"),
+        "yesterday_actions": yesterday_actions,
     }
     conn.close()
     print(json.dumps(output, ensure_ascii=False, indent=2))
@@ -576,19 +977,7 @@ def extract():
         old_pool = old.get("pool", "B")
         pool_sug = pool_suggestion(priority, days, old_pool, has_new_cust_msg, cfg)
 
-        # 自动裁决：priority=high + B池 → 入热池（受容量保护）；0客户消息+超30天 → 入沉默池
-        if priority == "high" and old_pool == "B":
-            if hot_count < hot_limit:
-                old_pool = "hot"
-                pool_sug = None
-                hot_count += 1
-            else:
-                pool_sug = "upgrade_to_hot"  # 热池满，保留在B池顶部
-        elif cust_count == 0 and days > 30 and old_pool == "B":
-            old_pool = "dormant"
-            pool_sug = None
-
-        # 机会温度（0-100）：从聊天信号扫描，不是猜
+        # 机会温度先算（自动入热池门槛依赖温度）
         old_temp = old.get("temperature", {}).get("value") if old.get("temperature") else None
         temperature = compute_temperature(cust_msgs, days, detection["pursuit_warning"], cfg)
         temp_trend = "→"
@@ -596,14 +985,28 @@ def extract():
             diff = temperature - old_temp
             if diff >= 8: temp_trend = "↑"
             elif diff <= -8: temp_trend = "↓"
-        # 机会温度历史追踪
         temp_history = old.get("temperature_history", [])
         if old_temp is not None and temp_trend != "→":
             temp_history.append({
                 "date": datetime.now().strftime("%Y-%m-%d"),
                 "from": old_temp, "to": temperature, "trend": temp_trend
             })
-        temp_history = temp_history[-30:]  # 只保留最近30条
+        temp_history = temp_history[-30:]
+
+        # 自动入热：须过 hot_entry 门槛 + 容量；否则仅保留 pool_suggestion 给 Agent
+        if old_pool == "B" and can_auto_upgrade_to_hot(
+            priority, days, has_new_cust_msg, cust_count,
+            detection["pursuit_warning"], temperature, cfg,
+        ):
+            if hot_count < hot_limit:
+                old_pool = "hot"
+                pool_sug = None
+                hot_count += 1
+            else:
+                pool_sug = "upgrade_to_hot"
+        elif cust_count == 0 and days > 30 and old_pool == "B":
+            old_pool = "dormant"
+            pool_sug = None
 
         client = {
             "jid": jid, "name": name, "country": country,
@@ -635,6 +1038,7 @@ def extract():
             "script_history": old.get("script_history", []),
             "coach_log": old.get("coach_log", []),
             "pool_history": old.get("pool_history", []),
+            "promises": old.get("promises", []),
         }
         clients.append(client)
 
@@ -734,12 +1138,10 @@ def extract():
         ][:20],
     }
     summary_path = SCRIPT_DIR / "data" / "summary.json"
-    with open(summary_path, "w") as f:
-        json.dump(summary, f, ensure_ascii=False, indent=2)
+    atomic_write_json(summary_path, summary)
 
-    # clients.json — 完整元数据（Workflow 可能用到）
-    with open(CLIENTS_JSON, "w") as f:
-        json.dump(clients, f, ensure_ascii=False, indent=2)
+    # clients.json — 完整元数据（原子写，防半写损坏）
+    atomic_write_json(CLIENTS_JSON, clients)
 
     try:
         print(f"✅ extract.py 完成")
@@ -758,9 +1160,23 @@ def extract():
         json.dump(cfg, f, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--detail", help="输出单个客户的完整对话")
+    parser = argparse.ArgumentParser(description="Sarah 数据提取 / 详情 / 安全写回 / 报告快照")
+    parser.add_argument("--detail", help="输出单个客户完整对话 + customer_style_stats")
+    parser.add_argument(
+        "--write-analysis",
+        metavar="JSON",
+        help="安全合并写回 Agent 分析。JSON 或 @file.json，必须含 jid",
+    )
+    parser.add_argument(
+        "--save-report",
+        metavar="JSON",
+        help="保存报告快照到 data/last_report.json。JSON 或 @file.json",
+    )
     args = parser.parse_args()
+    if args.write_analysis:
+        sys.exit(write_analysis(args.write_analysis) or 0)
+    if args.save_report:
+        sys.exit(save_report(args.save_report) or 0)
     if args.detail:
         detail(args.detail)
     else:
